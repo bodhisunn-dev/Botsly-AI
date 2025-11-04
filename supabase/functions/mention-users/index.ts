@@ -31,11 +31,11 @@ Deno.serve(async (req) => {
 
     const currentIndex = stateData?.value ? parseInt(stateData.value) : 0;
 
-    // Get all users ordered by last_active_at ASC (least active first), excluding High_ju
+    // Get all users ordered by last_active_at ASC (least active first), excluding High_ju and JR28X
     const { data: allUsers, error: usersError } = await supabase
       .from('telegram_users')
       .select('username, first_name, last_name')
-      .neq('username', 'High_ju')
+      .not('username', 'in', '("High_ju","JR28X")')
       .order('last_active_at', { ascending: true });
 
     if (usersError) {
