@@ -5,10 +5,10 @@ export const useDashboardMetrics = () => {
   return useQuery({
     queryKey: ['dashboard-metrics'],
     queryFn: async () => {
-      // Get total users
-      const { count: totalUsers } = await supabase
-        .from('telegram_users')
-        .select('*', { count: 'exact', head: true });
+      // Get current Telegram member count via backend function
+      const { data: memberCountData, error: memberCountError } = await supabase
+        .functions.invoke('get-chat-member-count', { body: {} });
+      const totalUsers = memberCountError ? null : (memberCountData as any)?.count;
 
       // Get messages from today
       const today = new Date();
