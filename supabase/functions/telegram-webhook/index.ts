@@ -25,6 +25,59 @@ serve(async (req) => {
       -1002153480772, // FOUNDERS CHAT
     ];
 
+    // Handle member join events
+    if (update.message?.new_chat_members) {
+      const chatId = update.message.chat.id;
+      
+      if (ALLOWED_CHAT_IDS.includes(chatId)) {
+        for (const newMember of update.message.new_chat_members) {
+          if (!newMember.is_bot) {
+            console.log('New member joined:', newMember.username || newMember.first_name);
+            
+            // Add new member to database
+            await supabase
+              .from('telegram_users')
+              .upsert({
+                telegram_id: newMember.id,
+                username: newMember.username || '',
+                first_name: newMember.first_name || '',
+                last_name: newMember.last_name || '',
+                last_active_at: new Date().toISOString(),
+                is_online: false,
+                online_status_updated_at: new Date().toISOString()
+              }, {
+                onConflict: 'telegram_id',
+                ignoreDuplicates: false
+              });
+          }
+        }
+      }
+      
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Handle member leave events
+    if (update.message?.left_chat_member) {
+      const chatId = update.message.chat.id;
+      const leftMember = update.message.left_chat_member;
+      
+      if (ALLOWED_CHAT_IDS.includes(chatId) && !leftMember.is_bot) {
+        console.log('Member left:', leftMember.username || leftMember.first_name);
+        
+        // Remove user from database
+        await supabase
+          .from('telegram_users')
+          .delete()
+          .eq('telegram_id', leftMember.id);
+      }
+      
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Extract message data
     const message = update.message || update.edited_message;
     if (!message) {
@@ -243,6 +296,68 @@ serve(async (req) => {
 
     if (configMap.gn_enabled && (lowerText === 'gn' || lowerText.includes('good night'))) {
       await sendTelegramMessage(chatId, `Good night ${firstName}! 🌙 Sweet dreams!`);
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Handle image combine requests
+    if (messageText.startsWith('/combine')) {
+      const description = messageText.replace('/combine', '').trim();
+      
+      // Check if message is a reply to another message with photo
+      if (message.reply_to_message?.photo && message.photo && message.photo.length > 0) {
+        const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
+        
+        // Get the first image (from the message being replied to)
+        const photo1 = message.reply_to_message.photo[message.reply_to_message.photo.length - 1];
+        const fileResponse1 = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${photo1.file_id}`);
+        const fileData1 = await fileResponse1.json();
+        
+        // Get the second image (from current message)
+        const photo2 = message.photo[message.photo.length - 1];
+        const fileResponse2 = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${photo2.file_id}`);
+        const fileData2 = await fileResponse2.json();
+        
+        if (fileData1.ok && fileData2.ok) {
+          const fileUrl1 = `https://api.telegram.org/file/bot${botToken}/${fileData1.result.file_path}`;
+          const fileUrl2 = `https://api.telegram.org/file/bot${botToken}/${fileData2.result.file_path}`;
+          
+          await sendTelegramMessage(chatId, `🎨 Combining images with: "${description}"...`);
+          
+          // Store the status message for tracking
+          await supabase.from('messages').insert({
+            telegram_user_id: userData?.id,
+            chat_id: chatId,
+            message_text: `Combining images: "${description}"...`,
+            is_bot_message: true
+          });
+          
+          // Call combine-images function
+          const { data: combineData, error: combineError } = await supabase.functions.invoke('combine-images', {
+            body: { imageUrl1: fileUrl1, imageUrl2: fileUrl2, description }
+          });
+
+          if (combineError) {
+            console.error('Image combine error:', combineError);
+            await sendTelegramMessage(chatId, 'Sorry, I had trouble combining those images. Please try again!');
+          } else if (combineData?.image) {
+            // Send combined image back to Telegram
+            await sendTelegramPhoto(chatId, combineData.image);
+            
+            // Store success message
+            await supabase.from('messages').insert({
+              telegram_user_id: userData?.id,
+              chat_id: chatId,
+              message_text: '✅ Images combined successfully',
+              is_bot_message: true
+            });
+          }
+        }
+      } else {
+        await sendTelegramMessage(chatId, '📸 To combine images:\n1. Send the first image to the chat\n2. Reply to that image with a second image and caption "/combine [description]"\n\nExample: Reply to an image with another image and caption "/combine merge them into a cyberpunk scene"');
+      }
+      
       return new Response(JSON.stringify({ ok: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });

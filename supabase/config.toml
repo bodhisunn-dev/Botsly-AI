@@ -15,6 +15,9 @@ verify_jwt = false
 [functions.remix-image]
 verify_jwt = false
 
+[functions.combine-images]
+verify_jwt = false
+
 [functions.mention-users]
 verify_jwt = false
 
