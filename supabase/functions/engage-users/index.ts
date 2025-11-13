@@ -24,7 +24,7 @@ serve(async (req) => {
     const { data: users } = await supabase
       .from('telegram_users')
       .select('telegram_id, first_name, username, last_active_at')
-      .neq('username', 'High_ju')
+      .not('username', 'in', '("High_ju","JR28X")')
       .order('last_active_at', { ascending: true })
       .limit(20);
 
