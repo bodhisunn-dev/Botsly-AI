@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     // Get all users ordered by last_active_at ASC (least active first), excluding High_ju and JR28X
     const { data: allUsers, error: usersError } = await supabase
       .from('telegram_users')
-      .select('username, first_name, last_name')
+      .select('telegram_id, username, first_name, last_name')
       .not('username', 'in', '("High_ju","JR28X")')
       .order('last_active_at', { ascending: true });
 
@@ -66,13 +66,15 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString() 
       });
 
-    // Create mentions string
+    // Create mentions string - use markdown links for users without usernames
     const mentions = batch
       .map(user => {
         if (user.username) {
           return `@${user.username}`;
         }
-        return user.first_name || 'User';
+        // For users without username, use markdown mention with telegram_id
+        const name = user.first_name || user.last_name || 'User';
+        return `[${name}](tg://user?id=${user.telegram_id})`;
       })
       .join(' ');
 
@@ -100,7 +102,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           chat_id: TELEGRAM_CHAT_ID,
           text: message,
-          parse_mode: 'HTML'
+          parse_mode: 'Markdown'
         }),
       }
     );
