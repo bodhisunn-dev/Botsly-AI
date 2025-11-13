@@ -39,12 +39,12 @@ serve(async (req) => {
     // Calculate timestamp for 12 hours ago
     const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
-    // Get top 10 most active users from last 12 hours (excluding High_ju)
+    // Get top 10 most active users from last 12 hours (excluding High_ju and JR28X)
     const { data: activeUsers, error: usersError } = await supabase
       .from('telegram_users')
       .select('username, first_name, telegram_id')
       .gte('last_active_at', twelveHoursAgo)
-      .neq('username', 'High_ju')
+      .not('username', 'in', '("High_ju","JR28X")')
       .not('username', 'is', null)
       .order('message_count', { ascending: false })
       .limit(10);
