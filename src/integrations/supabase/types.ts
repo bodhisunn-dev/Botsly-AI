@@ -207,14 +207,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      add_admin_by_email: {
-        Args: { admin_email: string }
-        Returns: Json
-      }
-      is_admin: {
-        Args: { user_id: string }
-        Returns: boolean
-      }
+      add_admin_by_email: { Args: { admin_email: string }; Returns: Json }
+      is_admin: { Args: { user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
