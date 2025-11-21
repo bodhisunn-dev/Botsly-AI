@@ -14,17 +14,17 @@ const UserLeaderboard = ({ expanded = false }: UserLeaderboardProps) => {
       // Get messages from last 24 hours
       const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       
-      // Get users who have been active in last 24 hours with their message counts
-      const { data: activeUsers, error: usersError } = await supabase
+      // Get ALL users ordered by last_active_at
+      const { data: allUsers, error: usersError } = await supabase
         .from('telegram_users')
         .select('id, telegram_id, first_name, last_name, username, last_active_at')
-        .gte('last_active_at', last24Hours);
+        .order('last_active_at', { ascending: false, nullsFirst: false });
       
       if (usersError) throw usersError;
-      if (!activeUsers || activeUsers.length === 0) return [];
+      if (!allUsers || allUsers.length === 0) return [];
       
       // Get message counts for each user in last 24 hours
-      const userStatsPromises = activeUsers.map(async (user) => {
+      const userStatsPromises = allUsers.map(async (user) => {
         const { count } = await supabase
           .from('messages')
           .select('*', { count: 'exact', head: true })
@@ -39,11 +39,10 @@ const UserLeaderboard = ({ expanded = false }: UserLeaderboardProps) => {
       
       const usersWithStats = await Promise.all(userStatsPromises);
       
-      // Filter out users with 0 messages and sort by message count
+      // Sort by message count (most active first) and limit based on expanded prop
       const sortedUsers = usersWithStats
-        .filter(user => user.message_count_24h > 0)
         .sort((a, b) => b.message_count_24h - a.message_count_24h)
-        .slice(0, expanded ? 1000 : 5);
+        .slice(0, expanded ? 1000 : 10);
       
       return sortedUsers.map((user, index) => ({
         rank: index + 1,
@@ -52,7 +51,7 @@ const UserLeaderboard = ({ expanded = false }: UserLeaderboardProps) => {
         engagement: user.message_count_24h, // Using message count as engagement for now
       }));
     },
-    refetchInterval: 86400000, // Refresh every 24 hours
+    refetchInterval: 30000, // Refresh every 30 seconds
   });
 
   if (isLoading) {
