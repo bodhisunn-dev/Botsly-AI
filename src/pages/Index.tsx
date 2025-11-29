@@ -18,6 +18,7 @@ import { TestTopActiveShoutout } from "@/components/TestTopActiveShoutout";
 import { TestUserMentions } from "@/components/TestUserMentions";
 import { BulkUserImport } from "@/components/BulkUserImport";
 import { TestBotslyMemePost } from "@/components/TestBotslyMemePost";
+import { TestConsolidateXPosts } from "@/components/TestConsolidateXPosts";
 import { OnlineUsersTracker } from "@/components/OnlineUsersTracker";
 import { useDashboardMetrics } from "@/hooks/useDashboardMetrics";
 import { supabase } from "@/integrations/supabase/client";
@@ -207,6 +208,7 @@ const Index = () => {
               <TestTopActiveShoutout />
               <TestUserMentions />
               <TestBotslyMemePost />
+              <TestConsolidateXPosts />
               <BulkUserImport />
                 <BotConfig />
               </div>
