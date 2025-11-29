@@ -98,9 +98,9 @@ serve(async (req) => {
     consolidatedMessage += `Found ${postsData.length} post${postsData.length !== 1 ? 's' : ''} shared by the community:\n\n`;
     
     postsData.forEach((post, index) => {
-      consolidatedMessage += `${index + 1}. *${post.user}* (${post.timestamp})\n`;
+      consolidatedMessage += `${index + 1}. *${escapeMarkdown(post.user)}* (${post.timestamp})\n`;
       if (post.snippet) {
-        consolidatedMessage += `   _"${post.snippet}"_\n`;
+        consolidatedMessage += `   _"${escapeMarkdown(post.snippet)}"_\n`;
       }
       post.urls.forEach(url => {
         consolidatedMessage += `   🔗 ${url}\n`;
@@ -154,4 +154,8 @@ serve(async (req) => {
 function extractUrls(text: string): string[] {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   return text.match(urlRegex) || [];
+}
+
+function escapeMarkdown(text: string): string {
+  return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
 }
