@@ -93,14 +93,14 @@ serve(async (req) => {
       });
     }
     
-    // Build the consolidated message
-    let consolidatedMessage = '🐦 *X.com Posts from the Last 24 Hours*\n\n';
+    // Build the consolidated message using HTML format
+    let consolidatedMessage = '🐦 <b>X.com Posts from the Last 24 Hours</b>\n\n';
     consolidatedMessage += `Found ${postsData.length} post${postsData.length !== 1 ? 's' : ''} shared by the community:\n\n`;
     
     postsData.forEach((post, index) => {
-      consolidatedMessage += `${index + 1}. *${escapeMarkdown(post.user)}* (${post.timestamp})\n`;
+      consolidatedMessage += `${index + 1}. <b>${escapeHtml(post.user)}</b> (${post.timestamp})\n`;
       if (post.snippet) {
-        consolidatedMessage += `   _"${escapeMarkdown(post.snippet)}"_\n`;
+        consolidatedMessage += `   <i>"${escapeHtml(post.snippet)}"</i>\n`;
       }
       post.urls.forEach(url => {
         consolidatedMessage += `   🔗 ${url}\n`;
@@ -108,7 +108,7 @@ serve(async (req) => {
       consolidatedMessage += '\n';
     });
     
-    consolidatedMessage += '---\n_This is an automated summary posted every 12 hours_ 📊';
+    consolidatedMessage += '---\n<i>This is an automated summary posted every 12 hours</i> 📊';
     
     console.log('Sending consolidated message to Telegram...');
     
@@ -119,7 +119,7 @@ serve(async (req) => {
       body: JSON.stringify({
         chat_id: chatId,
         text: consolidatedMessage,
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         disable_web_page_preview: true
       }),
     });
@@ -156,6 +156,10 @@ function extractUrls(text: string): string[] {
   return text.match(urlRegex) || [];
 }
 
-function escapeMarkdown(text: string): string {
-  return text.replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
