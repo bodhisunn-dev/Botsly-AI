@@ -1,5 +1,8 @@
 project_id = "eptbjrnqydvkkplousle"
 
+[functions.consolidate-x-posts]
+verify_jwt = false
+
 [functions.telegram-webhook]
 verify_jwt = false
 
